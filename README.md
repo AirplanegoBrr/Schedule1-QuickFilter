@@ -10,7 +10,7 @@ Info video below: (click picture)
 
 GIF example:
 
-![GIF Example](https://raw.githubusercontent.com/AirplanegoBrr/Schedule1-QuickFilter/refs/heads/master/assests/using.gif)
+![GIF Example](https://github.com/AirplanegoBrr/Schedule1-QuickFilter/blob/master/assests/using.gif?raw=true)
 
 ---
 
