@@ -5,7 +5,7 @@
 
 Info video below: (click picture)
 
-[![Info video](https://img.youtube.com/vi/XdQA-SPalek/0.jpg)](https://www.youtube.com/watch?v=XdQA-SPalek)
+[![Info video](https://img.youtube.com/vi/nQxGSbygMoU/0.jpg)](https://youtu.be/nQxGSbygMoU)
 
 
 GIF example:
@@ -47,6 +47,10 @@ Join my [Discord](M6A2eK7)!
 ---
 
 ## 💡 Features
+
+
+### ⭐ Works on anything!
+- Works on Cars, Shelfs, Mixer, Pallets, Everything! (Let me know if anything is missing!)
 
 ### 🔄 Quick Filtered Item Transfer (**H** Key) [MovePushFilterd]
 - Transfers items **to shelves** when looking at a shelf, only adding items that match whats already in the self!
