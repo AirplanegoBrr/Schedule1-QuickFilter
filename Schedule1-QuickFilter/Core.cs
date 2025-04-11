@@ -6,15 +6,9 @@ using MelonLoader;
 using UnityEngine;
 using System.Text.Json;
 using Il2CppScheduleOne.ObjectScripts;
-using System.Linq.Expressions;
 
-[assembly: MelonInfo(typeof(Schedule1_QuickFilter.Core), "Schedule1-QuickFilter", "1.3.0", "airplanegobrr", null)]
+[assembly: MelonInfo(typeof(Schedule1_QuickFilter.Core), "Schedule1-QuickFilter", "1.4.0", "airplanegobrr", null)]
 [assembly: MelonGame("TVGS", "Schedule I")]
-
-// TODO: Make shelf scans better
-// We need to find the "StorageRack_Large(Clone)" in one of the parents
-// Find the Storage entity in one of the parents idfk
-// Lazy ill do it later! :D
 
 namespace Schedule1_QuickFilter {
     public class Core : MelonMod {
@@ -46,22 +40,68 @@ namespace Schedule1_QuickFilter {
             MelonPreferences.Save();
         }
 
+        bool checkJSONDataMatches(ItemInstance item1, ItemInstance item2, string key) {
+            // Get json
+            string rawData1 = item1.GetItemData().GetJson(false);
+            string rawData2 = item2.GetItemData().GetJson(false);
+
+            // Get C# json data
+            var jsonDoc1 = JsonDocument.Parse(rawData1);
+            var jsonDoc2 = JsonDocument.Parse(rawData2);
+
+            bool has1Check = jsonDoc1.RootElement.TryGetProperty(key, out var prop1Check);
+            bool has2Check = jsonDoc1.RootElement.TryGetProperty(key, out var prop2Check);
+
+            // One has, other doesn't
+            if (has1Check != has2Check) {
+                return false;
+            }
+
+            if (has1Check && has2Check && prop1Check.GetString().ToLower() != prop2Check.GetString().ToLower()) {
+                return false;  // Mismatch
+            }
+
+            return true;
+        }
+
+        bool hasDataKey(ItemInstance item1, string key) {
+            string rawData1 = item1?.GetItemData()?.GetJson(false);
+
+            if (string.IsNullOrEmpty(rawData1)) return false;
+
+            using var jsonDoc1 = JsonDocument.Parse(rawData1);
+
+            if (!jsonDoc1.RootElement.TryGetProperty(key, out var prop1Check))
+                return false;
+
+            if (prop1Check.ValueKind != JsonValueKind.String)
+                return false;
+
+            return !string.IsNullOrEmpty(prop1Check.GetString());
+        }
+
+
         Il2CppSystem.Collections.Generic.List<ItemSlot> findSameOrEmptySlot(Il2CppSystem.Collections.Generic.List<ItemSlot> storageSlots, ItemInstance item) {
             Il2CppSystem.Collections.Generic.List<ItemSlot> validSlots = new();
             Il2CppSystem.Collections.Generic.List<ItemSlot> validEmptySlots = new();
 
-            LoggerInstance.Msg($"[FSOES] Storage has {storageSlots._size} slots");
 
             // This will make it so some slots are locked out from being used
             int maxSlotsToUse = storageSlots.Count;
+            bool checkHasQuality = false;
 
             // Mixer/Packager
             if (storageSlots.Count == 3) {
                 maxSlotsToUse = 2;
+                checkHasQuality = true;
             } else if (storageSlots.Count == 2) {
                 // Dryer
                 maxSlotsToUse = 1;
+                checkHasQuality = true;
             }
+
+            LoggerInstance.Msg($"[FSOES] Storage has {storageSlots._size} slots, filling {maxSlotsToUse}, Quality check: {checkHasQuality}");
+
 
             for (int i = 0; i < storageSlots._size; i++) {
                 if (i >= maxSlotsToUse) continue;
@@ -70,13 +110,53 @@ namespace Schedule1_QuickFilter {
 
                 LoggerInstance.Msg($"[FSOES] Slot {i} has {storageSlot?.Quantity} of {storageSlot?.ItemInstance?.Name}");
 
-                if (storageSlot.ItemInstance == null) {
+                if (storageSlot?.ItemInstance == null) {
+                    // Check if we are doing a quality check AND check if this is the first slot
+                    if (checkHasQuality && i == 0) {
+                        LoggerInstance.Msg("Running check!");
+                        // Test if the item has Quality data
+                        bool hasKey = hasDataKey(item, "Quality");
+                        bool isPackaged = hasDataKey(item, "PackagingID");
+
+                        // Check if we have a valid Quality AND that its NOT packaged.
+                        if (hasKey && !isPackaged) {
+                            LoggerInstance.Msg("Check passed!");
+
+                            validSlots.Add(storageSlot);
+                            continue;
+                        } else {
+                            LoggerInstance.Msg("Check didnt pass!");
+
+                            continue;
+                        }
+                    }
                     validEmptySlots.Add(storageSlot);
                     continue;
                 }
 
                 if (storageSlot.ItemInstance.Name == item.Name && storageSlot.ItemInstance.Quantity != storageSlot.ItemInstance.StackLimit) {
                     LoggerInstance.Msg($"[FSOES] Adding slot {i} as it matches requirements.");
+
+                    // Check if we are doing a quality check AND check if this is the first slot
+                    if (checkHasQuality && i == 0) {
+                        LoggerInstance.Msg("Checking for quality");
+                        // Test if the item has Quality data
+                        bool hasKey = hasDataKey(item, "Quality");
+                        bool isPackaged = hasDataKey(item, "PackagingID");
+
+                        LoggerInstance.Msg("Got values");
+
+
+                        bool areSameQuality = checkJSONDataMatches(item, storageSlot.ItemInstance, "Quality");
+
+                        // Check if we have a valid Quality AND that its NOT packaged.
+                        if (hasKey && areSameQuality && !isPackaged) {
+                            validSlots.Add(storageSlot);
+                            continue;
+                        } else {
+                            continue;
+                        }
+                    }
 
                     validSlots.Add(storageSlot);
                     continue;
@@ -106,39 +186,13 @@ namespace Schedule1_QuickFilter {
         }
 
         bool checkIfSameItem(ItemInstance item1, ItemInstance item2) {
-            // Get json
-            string rawData1 = item1.GetItemData().GetJson(false);
-            string rawData2 = item2.GetItemData().GetJson(false);
 
-            // Get C# json data
-            var jsonDoc1 = JsonDocument.Parse(rawData1);
-            var jsonDoc2 = JsonDocument.Parse(rawData2);
+            bool sameQuality = checkJSONDataMatches(item1, item2, "Quality");
+            if (!sameQuality) return false;
 
-            // Check "Quality"
-            bool hasQuality1 = jsonDoc1.RootElement.TryGetProperty("Quality", out var qualityProp1);
-            bool hasQuality2 = jsonDoc2.RootElement.TryGetProperty("Quality", out var qualityProp2);
+            bool samePacking = checkJSONDataMatches(item1, item2, "PackagingID");
+            if (!samePacking) return false;
 
-            if (hasQuality1 != hasQuality2) {
-                return false;
-            }
-
-            if (hasQuality1 && qualityProp1.GetString().ToLower() != qualityProp2.GetString().ToLower()) {
-                return false;  // Quality mismatch
-            }
-
-            // Check "PackagingID"
-            bool hasPacking1 = jsonDoc1.RootElement.TryGetProperty("PackagingID", out var packingProp1);
-            bool hasPacking2 = jsonDoc2.RootElement.TryGetProperty("PackagingID", out var packingProp2);
-
-            if (hasPacking1 != hasPacking2) {
-                return false;
-            }
-
-            if (hasPacking1 && packingProp1.GetString().ToLower() != packingProp2.GetString().ToLower()) {
-                return false;  // PackagingID mismatch
-            }
-
-            // If no mismatches were found, return true
             return true;
         }
 
@@ -235,6 +289,7 @@ namespace Schedule1_QuickFilter {
                     if (playerSlot != null && playerSlot.ItemInstance != null && ItemSlots != null) {
                         LoggerInstance.Msg($"[GVPSF] Slot {playerSlotIndex} has {playerSlot?.ItemInstance?.Name}");
 
+
                         bool keepAdding = addItemToStorage(playerSlot, ItemSlots, filter);
                         if (!keepAdding) return;
                     }
@@ -310,6 +365,19 @@ namespace Schedule1_QuickFilter {
                         if (packing != null) {
                             LoggerInstance.Msg("Found packer!");
                             itemSlots = packing.ItemSlots;
+
+                            // Tyler.
+                            // Why is the first slot index the packaging slot?
+                            // Then the 2ed slot is the product?
+                            // Why?
+                            // Why tyler?
+
+                            // why do you hate me?
+                
+                            var temp = itemSlots[0];
+                            itemSlots[0] = itemSlots[1];
+                            itemSlots[1] = temp;
+
                             break;
                             // mixing.ItemSlots
                         }
