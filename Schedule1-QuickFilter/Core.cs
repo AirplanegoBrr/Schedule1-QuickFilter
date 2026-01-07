@@ -11,7 +11,7 @@ using Il2CppScheduleOne.ObjectScripts;
 [assembly: MelonGame("TVGS", "Schedule I")]
 
 namespace Schedule1_QuickFilter {
-    public class Core : MelonMod {
+    public class Core: MelonMod {
 
         KeyCode moveFilteredKey = KeyCode.H;
         KeyCode moveKey = KeyCode.Y;
@@ -107,6 +107,27 @@ namespace Schedule1_QuickFilter {
                 if (i >= maxSlotsToUse) continue;
 
                 ItemSlot storageSlot = storageSlots[i];
+
+                bool hardFilterPass = true;
+
+                foreach (var filter in storageSlot.HardFilters) {
+                    LoggerInstance.Msg($"[FSOES] Filter type: {filter.GetIl2CppType().FullName}");
+
+                    //filter.IsValid()
+
+                    hardFilterPass = filter.DoesItemMatchFilter(item);
+                }
+
+                if (!hardFilterPass) {
+                    LoggerInstance.Msg($"[FSOES] Hard Filter does NOT accept item");
+                    continue;
+                }
+
+                var playerDoesMatch = storageSlot.DoesItemMatchPlayerFilters(item);
+                if (!playerDoesMatch) {
+                    LoggerInstance.Msg($"[FSOES] Player Filter does NOT accept item");
+                    continue;
+                }
 
                 LoggerInstance.Msg($"[FSOES] Slot {i} has {storageSlot?.Quantity} of {storageSlot?.ItemInstance?.Name}");
 
@@ -210,16 +231,16 @@ namespace Schedule1_QuickFilter {
             }
 
             Il2CppSystem.Collections.Generic.List<ItemSlot> validSlots = findSameOrEmptySlot(to, from.ItemInstance);
-           
+
             LoggerInstance.Msg($"[AITS] Found {validSlots.Count} valid slots");
 
             for (int slotIndex = 0; slotIndex < validSlots.Count; slotIndex++) {
                 ItemSlot slot = validSlots[slotIndex];
-                
-                try { 
+
+                try {
                     LoggerInstance.Msg($"[AITS] {slotIndex} is slot {slot?.SlotIndex} in the storage container");
-                } catch (Exception) {}
-                
+                } catch (Exception) { }
+
                 // if (slotIndex == maxSlotsToCheck) { return false; }
 
                 if (slot.ItemInstance == null && from.ItemInstance != null) {
@@ -373,7 +394,7 @@ namespace Schedule1_QuickFilter {
                             // Why tyler?
 
                             // why do you hate me?
-                
+
                             var temp = itemSlots[0];
                             itemSlots[0] = itemSlots[1];
                             itemSlots[1] = temp;

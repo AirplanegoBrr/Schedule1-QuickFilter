@@ -1,0 +1,41 @@
+# EditorConfig for Schedule1 C# mods
+# https://editorconfig.org
+
+root = true
+
+[*.cs]
+
+# ---------- INDENTATION ----------
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# ---------- BRACES (K&R style) ----------
+# OmniSharp recognizes these settings
+csharp_new_line_before_open_brace = none
+csharp_new_line_before_open_brace_namespace = false
+csharp_new_line_before_open_brace_type = false
+csharp_new_line_before_open_brace_method = false
+csharp_new_line_before_open_brace_property = false
+csharp_new_line_before_open_brace_accessor = false
+csharp_new_line_before_open_brace_anonymous_method = false
+csharp_new_line_before_open_brace_control_blocks = false
+csharp_new_line_before_open_brace_lambda = false
+
+# ---------- ELSE / ELSE IF ----------
+csharp_space_before_else = true
+csharp_space_before_catch = true
+csharp_space_before_finally = true
+
+# ---------- SPACING ----------
+csharp_space_around_binary_operators = before_and_after
+csharp_space_after_comma = true
+csharp_space_after_semicolon_in_for_statement = true
+csharp_space_before_colon_in_inheritance_clause = false
+csharp_space_after_colon_in_inheritance_clause = true
+
+# ---------- OTHER FORMATTING ----------
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less
